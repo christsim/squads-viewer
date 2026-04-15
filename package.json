@@ -1,0 +1,33 @@
+{
+  "name": "squads-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@solana/web3.js": "1.98.0",
+    "alpinejs": "3.14.0",
+    "buffer": "6.0.3"
+  },
+  "devDependencies": {
+    "@fontsource-variable/dm-sans": "5.1.1",
+    "@fontsource/chakra-petch": "5.1.1",
+    "@fontsource/cormorant-garamond": "5.1.1",
+    "@fontsource/fira-code": "5.1.1",
+    "@fontsource/jetbrains-mono": "5.1.1",
+    "@fontsource/vt323": "5.1.1",
+    "autoprefixer": "10.4.21",
+    "postcss": "8.5.3",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.3",
+    "vite": "6.3.2",
+    "vite-plugin-singlefile": "2.3.2",
+    "vitest": "3.1.2"
+  }
+}

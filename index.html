@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="swiss-vault">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squads Viewer</title>
+    <script type="module" src="/src/bootstrap.ts"></script>
+  </head>
+  <body class="min-h-screen" x-data="app">
+    <div class="dashboard min-h-screen">
+      <!-- ═══════════════════════════════════════════
+           HEADER BAR
+           ═══════════════════════════════════════════ -->
+      <header class="border-b border-border sticky top-0 z-50" style="background: var(--bg-primary)">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+          <!-- Logo / Title -->
+          <div class="flex items-center gap-2 shrink-0">
+            <h1 class="text-lg tracking-wide" style="color: var(--accent)">
+              SQUADS
+            </h1>
+            <span class="text-xs" style="color: var(--text-muted)">VIEWER</span>
+          </div>
+
+          <!-- Address Input -->
+          <div class="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              x-model="addressInput"
+              @keydown.enter="load()"
+              placeholder="Multisig PDA or Vault address..."
+              class="flex-1 px-3 py-2 text-sm"
+              spellcheck="false"
+            />
+            <button
+              @click="load()"
+              :disabled="loading"
+              class="btn-primary text-sm flex items-center gap-2"
+            >
+              <span x-show="!loading">Load</span>
+              <span x-show="loading" class="flex items-center gap-2">
+                <span class="spinner"></span>
+                Loading
+              </span>
+            </button>
+          </div>
+
+          <!-- Settings Toggle -->
+          <button
+            @click="settingsOpen = !settingsOpen"
+            class="btn-ghost text-sm"
+            :class="settingsOpen && 'border-accent text-accent'"
+          >
+            &#9881; Settings
+          </button>
+        </div>
+
+        <!-- Settings Panel (collapsible) -->
+        <div
+          x-show="settingsOpen"
+          x-transition.duration.200ms
+          class="border-t border-border"
+          style="background: var(--bg-secondary)"
+        >
+          <div class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
+            <!-- Theme -->
+            <div>
+              <label class="block mb-2 font-semibold section-title" style="color: var(--text-muted); font-size: 0.72rem">
+                Theme
+              </label>
+              <div class="flex flex-col gap-1">
+                <template x-for="[key, label] in Object.entries(THEME_LABELS)" :key="key">
+                  <label class="flex items-center gap-2 cursor-pointer py-1 px-2 rounded hover:opacity-80"
+                    :class="settings.theme === key && 'opacity-100'" 
+                    :style="settings.theme !== key && 'opacity: 0.5'"
+                  >
+                    <input
+                      type="radio"
+                      name="theme"
+                      :value="key"
+                      :checked="settings.theme === key"
+                      @change="applyTheme(key)"
+                      class="accent-current"
+                      style="accent-color: var(--accent)"
+                    />
+                    <span x-text="label" style="color: var(--text-primary)"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+
+            <!-- RPC -->
+            <div>
+              <label class="block mb-2 font-semibold section-title" style="color: var(--text-muted); font-size: 0.72rem">
+                RPC Endpoint
+              </label>
+              <template x-for="preset in RPC_PRESETS" :key="preset.url">
+                <label class="flex items-start gap-2 cursor-pointer py-1 px-2 mb-1">
+                  <input
+                    type="radio"
+                    name="rpc"
+                    :value="preset.url"
+                    :checked="settings.rpcUrl === preset.url && !settings.rpcCustom"
+                    @change="settings.rpcCustom = ''; updateRpc(preset.url)"
+                    style="accent-color: var(--accent)"
+                    class="mt-0.5"
+                  />
+                  <div>
+                    <span x-text="preset.label" class="text-xs" style="color: var(--text-secondary)"></span>
+                    <div x-show="preset.note" x-text="preset.note" class="text-xs mt-0.5" style="color: var(--text-muted); font-size: 0.6rem"></div>
+                  </div>
+                </label>
+              </template>
+              <label class="flex items-start gap-2 cursor-pointer py-1 px-2 mb-1">
+                <input
+                  type="radio"
+                  name="rpc"
+                  value="custom"
+                  :checked="!!settings.rpcCustom"
+                  @change=""
+                  style="accent-color: var(--accent)"
+                  class="mt-0.5"
+                />
+                <div class="flex-1">
+                  <span class="text-xs" style="color: var(--text-secondary)">Custom URL</span>
+                  <input
+                    type="text"
+                    x-model="settings.rpcCustom"
+                    @input="updateCustomRpc(settings.rpcCustom)"
+                    placeholder="https://your-rpc.com"
+                    class="w-full px-2 py-1 text-xs mt-1"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <!-- Resolution Method -->
+            <div>
+              <label class="block mb-2 font-semibold section-title" style="color: var(--text-muted); font-size: 0.72rem">
+                Vault Resolution
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer py-1 px-2 mb-1">
+                <input
+                  type="radio"
+                  name="resolution"
+                  value="squads-api"
+                  :checked="settings.resolutionMethod === 'squads-api'"
+                  @change="updateResolution('squads-api')"
+                  style="accent-color: var(--accent)"
+                />
+                <span class="text-xs" style="color: var(--text-secondary)">Squads API + on-chain</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer py-1 px-2">
+                <input
+                  type="radio"
+                  name="resolution"
+                  value="onchain-only"
+                  :checked="settings.resolutionMethod === 'onchain-only'"
+                  @change="updateResolution('onchain-only')"
+                  style="accent-color: var(--accent)"
+                />
+                <span class="text-xs" style="color: var(--text-secondary)">On-chain only</span>
+              </label>
+            </div>
+
+            <!-- Vault Scan Range -->
+            <div>
+              <label class="block mb-2 font-semibold section-title" style="color: var(--text-muted); font-size: 0.72rem">
+                Vault Scan Range
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-xs" style="color: var(--text-muted)">0 &ndash;</span>
+                <input
+                  type="number"
+                  x-model.number="settings.vaultScanMax"
+                  @change="persistSettings()"
+                  min="1"
+                  max="20"
+                  class="w-16 px-2 py-1 text-xs text-center"
+                />
+              </div>
+              <p class="text-xs mt-1" style="color: var(--text-muted)">
+                Higher values = more RPC calls
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════════════════
+           STATUS / ERROR BAR
+           ═══════════════════════════════════════════ -->
+      <div x-show="resolving || error" class="max-w-7xl mx-auto px-4 pt-4">
+        <!-- Resolving status -->
+        <div
+          x-show="resolving"
+          class="card px-4 py-3 flex items-center gap-3 text-sm"
+        >
+          <span class="spinner"></span>
+          <span x-text="resolvingStatus" style="color: var(--text-secondary)"></span>
+        </div>
+
+        <!-- Error -->
+        <div
+          x-show="error"
+          class="px-4 py-3 text-sm border-l-4"
+          style="border-color: #ef4444; background: rgba(239, 68, 68, 0.08); color: #fca5a5"
+        >
+          <span x-text="error"></span>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           EMPTY STATE
+           ═══════════════════════════════════════════ -->
+      <div
+        x-show="!multisig && !loading && !error"
+        class="max-w-7xl mx-auto px-4 pt-24 text-center"
+      >
+        <h2 class="text-3xl mb-4 cursor-blink" style="color: var(--accent)">
+          Squads Viewer
+        </h2>
+        <p class="text-sm mb-8" style="color: var(--text-muted); max-width: 400px; margin: 0 auto">
+          Enter a Squads multisig config PDA or vault address above to view
+          balances, members, and transaction history. Read-only.
+        </p>
+        <div class="addr text-xs" style="color: var(--text-muted)">
+          Enter a multisig config PDA or any vault address
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           DASHBOARD CONTENT
+           ═══════════════════════════════════════════ -->
+      <template x-if="multisig">
+      <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <!-- Row 1: Overview + Members -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in stagger-1">
+          <!-- Multisig Overview Card -->
+          <div class="card card-accent p-5 space-y-4">
+            <h2 class="section-title text-sm font-semibold" style="color: var(--text-muted)">
+              Multisig Overview
+            </h2>
+
+            <div class="space-y-3">
+              <!-- Address -->
+              <div>
+                <div class="text-xs mb-1" style="color: var(--text-muted)">Config PDA</div>
+                <div class="flex items-center gap-2">
+                  <a
+                    :href="solscanUrl(multisig.address)"
+                    target="_blank"
+                    class="addr addr-link truncate"
+                    x-text="multisig.address"
+                  ></a>
+                  <button
+                    @click="copyToClipboard(multisig.address)"
+                    class="btn-ghost text-xs px-1.5 py-0.5 shrink-0"
+                    x-text="copied === multisig.address ? '✓' : '⧉'"
+                  ></button>
+                </div>
+              </div>
+
+              <!-- Stats grid -->
+              <div class="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <div class="text-xs" style="color: var(--text-muted)">Threshold</div>
+                  <div class="text-xl font-semibold" style="color: var(--text-primary)">
+                    <span x-text="multisig.threshold" style="color: var(--accent)"></span>
+                    <span class="text-sm" style="color: var(--text-muted)">
+                      / <span x-text="multisig.members.length"></span>
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-xs" style="color: var(--text-muted)">Transactions</div>
+                  <div class="text-xl font-semibold" style="color: var(--text-primary)" x-text="multisig.transactionIndex"></div>
+                </div>
+                <div>
+                  <div class="text-xs" style="color: var(--text-muted)">Time Lock</div>
+                  <div class="text-sm" style="color: var(--text-secondary)" x-text="multisig.timeLock === 0 ? 'None' : multisig.timeLock + 's'"></div>
+                </div>
+                <div>
+                  <div class="text-xs" style="color: var(--text-muted)">Total Value</div>
+                  <div class="text-sm font-semibold" style="color: var(--accent)" x-text="totalUsd"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Members Card -->
+          <div class="card p-5 lg:col-span-2">
+            <h2 class="section-title text-sm font-semibold mb-4" style="color: var(--text-muted)">
+              Members
+              <span class="badge ml-2" x-text="multisig.members.length"></span>
+            </h2>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Address</th>
+                    <th>Permissions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(member, idx) in multisig.members" :key="member.address">
+                    <tr>
+                      <td class="text-center" style="color: var(--text-muted)" x-text="idx + 1"></td>
+                      <td>
+                        <div class="flex items-center gap-2">
+                           <a
+                            :href="solscanUrl(member.address)"
+                            target="_blank"
+                            class="addr addr-link break-all"
+                            x-text="member.address"
+                          ></a>
+                          <button
+                            @click="copyToClipboard(member.address)"
+                            class="btn-ghost text-xs px-1 py-0 shrink-0 opacity-40 hover:opacity-100"
+                            x-text="copied === member.address ? '✓' : '⧉'"
+                          ></button>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="flex flex-wrap gap-1">
+                          <template x-for="badge in permissionBadges(member)" :key="badge">
+                            <span class="badge badge-accent" x-text="badge"></span>
+                          </template>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Vaults Overview Cards -->
+        <div class="fade-in stagger-2">
+          <h2 class="section-title text-sm font-semibold mb-4" style="color: var(--text-muted)">
+            Vaults
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <template x-for="vault in vaults" :key="vault.index">
+              <div
+                class="card card-hover p-4 cursor-pointer transition-all"
+                :class="activeVaultTab === vault.index && 'card-accent'"
+                @click="switchVaultTab(vault.index)"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold" style="color: var(--text-muted)">
+                    Vault <span x-text="vault.index"></span>
+                  </span>
+                  <span
+                    class="status-dot"
+                    :class="vault.solBalance > 0 || vault.tokens.length > 0 ? 'status-dot-active' : 'status-dot-closed'"
+                  ></span>
+                </div>
+                <div class="text-lg font-semibold truncate" style="color: var(--text-primary)">
+                  <span x-show="vault.loading" class="spinner" style="width: 14px; height: 14px"></span>
+                  <span x-show="!vault.loading" x-text="formatBalance(vault.solBalance, 4) + ' SOL'"></span>
+                </div>
+                <div class="text-xs mt-1" style="color: var(--text-muted)">
+                  <span x-show="!vault.loading" x-text="vault.solUsd !== null ? formatUsd(vault.solUsd) : '--'"></span>
+                </div>
+                <div
+                  x-show="vault.tokens.length > 0"
+                  class="text-xs mt-2 pt-2 border-t border-border"
+                  style="color: var(--text-muted)"
+                >
+                  + <span x-text="vault.tokens.length"></span> token<span x-show="vault.tokens.length !== 1">s</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-border">
+                  <a
+                    :href="solscanUrl(vault.address)"
+                    target="_blank"
+                    class="addr addr-link text-xs break-all leading-tight"
+                    style="font-size: 0.6rem"
+                    x-text="vault.address"
+                  ></a>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Row 3: Vault Detail (active vault tab) -->
+        <template x-if="vaults.length > 0 && activeVaultTab >= 0 && vaults[activeVaultTab]">
+          <div class="fade-in stagger-3">
+            <div class="card p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="section-title text-sm font-semibold" style="color: var(--text-muted)">
+                  Vault <span x-text="vaults[activeVaultTab].index"></span> Details
+                </h2>
+                <div class="flex items-center gap-2">
+                  <a
+                    :href="solscanUrl(vaults[activeVaultTab].address)"
+                    target="_blank"
+                    class="addr addr-link text-xs break-all"
+                    x-text="vaults[activeVaultTab].address"
+                  ></a>
+                  <button
+                    @click="copyToClipboard(vaults[activeVaultTab].address)"
+                    class="btn-ghost text-xs px-1.5 py-0.5 shrink-0"
+                    x-text="copied === vaults[activeVaultTab].address ? '✓' : '⧉'"
+                  ></button>
+                </div>
+              </div>
+
+              <!-- SOL Balance Row -->
+              <div class="flex items-center gap-4 pb-4 border-b border-border mb-4">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--accent-dim); color: var(--accent)">
+                  ◎
+                </div>
+                <div class="flex-1">
+                  <div class="font-semibold" style="color: var(--text-primary)">
+                    SOL
+                  </div>
+                  <div class="text-xs" style="color: var(--text-muted)">Native</div>
+                </div>
+                <div class="text-right">
+                  <div class="font-semibold font-mono text-sm" style="color: var(--text-primary)" x-text="formatBalance(vaults[activeVaultTab].solBalance, 6)"></div>
+                  <div class="text-xs" style="color: var(--text-muted)" x-text="formatUsd(vaults[activeVaultTab].solUsd)"></div>
+                </div>
+              </div>
+
+              <!-- Token Balances -->
+              <template x-for="token in vaults[activeVaultTab].tokens" :key="token.mint">
+                <div class="flex items-center gap-4 py-3 border-b" style="border-color: color-mix(in srgb, var(--border-color) 40%, transparent)">
+                  <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0" style="background: var(--bg-secondary)">
+                    <img
+                      x-show="token.logoUri"
+                      :src="token.logoUri"
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <span
+                      x-show="!token.logoUri"
+                      class="text-xs"
+                      style="color: var(--text-muted)"
+                    >?</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm truncate" style="color: var(--text-primary)" x-text="token.symbol || token.name || 'Unknown'"></div>
+                    <div class="text-xs truncate" style="color: var(--text-muted)" x-text="token.name || token.mint"></div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="font-semibold font-mono text-sm" style="color: var(--text-primary)" x-text="token.uiBalance"></div>
+                    <div class="text-xs" style="color: var(--text-muted)" x-text="formatUsd(token.usdValue)"></div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- No tokens -->
+              <div
+                x-show="vaults[activeVaultTab].tokens.length === 0 && !vaults[activeVaultTab].loading"
+                class="text-center py-4 text-xs"
+                style="color: var(--text-muted)"
+              >
+                No SPL tokens in this vault
+              </div>
+
+              <!-- Vault Activity -->
+              <div x-show="vaults[activeVaultTab].activity.length > 0" class="mt-6">
+                <h3 class="section-title text-xs font-semibold mb-3" style="color: var(--text-muted)">
+                  Recent Activity
+                </h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Signature</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="tx in vaults[activeVaultTab].activity" :key="tx.signature">
+                      <tr>
+                        <td>
+                          <a
+                            :href="solscanTxUrl(tx.signature)"
+                            target="_blank"
+                            class="addr addr-link"
+                            x-text="shortenAddress(tx.signature, 8)"
+                          ></a>
+                        </td>
+                        <td x-text="formatDate(tx.blockTime)"></td>
+                        <td>
+                          <span
+                            class="badge"
+                            :class="tx.err ? '' : 'badge-accent'"
+                            x-text="tx.err ? 'Failed' : 'Success'"
+                          ></span>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Row 4: Transactions / Proposals -->
+        <div x-show="proposals.length > 0" class="fade-in stagger-4">
+          <div class="card p-5">
+            <h2 class="section-title text-sm font-semibold mb-4" style="color: var(--text-muted)">
+              Transactions
+            </h2>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Transaction PDA</th>
+                    <th>Status</th>
+                    <th>Approved</th>
+                    <th>Rejected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="prop in proposals" :key="prop.index">
+                    <tr>
+                      <td class="font-semibold" style="color: var(--text-primary)" x-text="prop.index"></td>
+                      <td>
+                        <a
+                          :href="solscanUrl(prop.transactionPda)"
+                          target="_blank"
+                          class="addr addr-link"
+                          x-text="shortenAddress(prop.transactionPda, 6)"
+                        ></a>
+                      </td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="{
+                            'badge-accent': prop.status === 'Executed' || prop.status === 'Approved',
+                          }"
+                          x-text="prop.status"
+                        ></span>
+                      </td>
+                      <td>
+                        <template x-if="prop.exists && prop.approved.length > 0">
+                          <div class="flex flex-wrap gap-1">
+                            <template x-for="addr in prop.approved" :key="addr">
+                              <span
+                                class="text-xs addr"
+                                :title="addr"
+                                x-text="shortenAddress(addr, 3)"
+                              ></span>
+                            </template>
+                          </div>
+                        </template>
+                        <span x-show="!prop.exists" class="text-xs" style="color: var(--text-muted)">--</span>
+                      </td>
+                      <td>
+                        <template x-if="prop.exists && prop.rejected.length > 0">
+                          <div class="flex flex-wrap gap-1">
+                            <template x-for="addr in prop.rejected" :key="addr">
+                              <span
+                                class="text-xs addr"
+                                :title="addr"
+                                x-text="shortenAddress(addr, 3)"
+                              ></span>
+                            </template>
+                          </div>
+                        </template>
+                        <span x-show="!prop.exists || prop.rejected.length === 0" class="text-xs" style="color: var(--text-muted)">--</span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center py-8 text-xs" style="color: var(--text-muted)">
+          Read-only viewer &middot; All data fetched directly from Solana mainnet &middot;
+          <a href="https://github.com/Squads-Protocol/v4" target="_blank" class="addr-link" style="color: var(--text-secondary)">Squads Protocol v4</a>
+        </footer>
+      </div>
+      </template>
+    </div>
+  </body>
+</html>

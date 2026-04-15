@@ -1,0 +1,111 @@
+/* ============================================================
+   SWISS VAULT
+   Luxury financial interface. Editorial serif + clean sans.
+   Warm amber/gold on near-black. Authoritative, refined.
+   ============================================================ */
+[data-theme="swiss-vault"] {
+  --bg-primary: #08070a;
+  --bg-secondary: #110f14;
+  --bg-card: #14121a;
+  --bg-card-hover: #1a1720;
+  --text-primary: #f0ebe0;
+  --text-secondary: #a8a090;
+  --text-muted: #605848;
+  --accent: #c8a44e;
+  --accent-hover: #d9b960;
+  --accent-dim: rgba(200, 164, 78, 0.12);
+  --border-color: #2a2520;
+  --border-width: 1px;
+  --radius: 3px;
+  --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(200, 164, 78, 0.04);
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: "DM Sans Variable", "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --heading-tracking: 0.02em;
+  --badge-transform: none;
+  --badge-tracking: 0.02em;
+}
+
+/* ============================================================
+   MISSION CONTROL
+   Aerospace ops dashboard. Geometric tech font + IBM Plex.
+   Cool teal/cyan on deep charcoal. Grid-based, systematic.
+   ============================================================ */
+[data-theme="mission-control"] {
+  --bg-primary: #0b0e14;
+  --bg-secondary: #0f1319;
+  --bg-card: #12161e;
+  --bg-card-hover: #171c26;
+  --text-primary: #c4cdd9;
+  --text-secondary: #7a8694;
+  --text-muted: #3e4a58;
+  --accent: #00d4aa;
+  --accent-hover: #1aebc0;
+  --accent-dim: rgba(0, 212, 170, 0.08);
+  --border-color: #1e2836;
+  --border-width: 1px;
+  --radius: 2px;
+  --card-shadow: 0 0 0 1px var(--border-color);
+  --font-display: "Chakra Petch", "Orbitron", system-ui, sans-serif;
+  --font-body: "Chakra Petch", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --heading-tracking: 0.06em;
+  --badge-transform: uppercase;
+  --badge-tracking: 0.08em;
+}
+
+/* ============================================================
+   RAW PROTOCOL
+   Brutalist. Heavy borders. Monospace everything.
+   Pure black, white text, sharp red accent. Zero decoration.
+   ============================================================ */
+[data-theme="raw-protocol"] {
+  --bg-primary: #000000;
+  --bg-secondary: #060606;
+  --bg-card: #000000;
+  --bg-card-hover: #0a0a0a;
+  --text-primary: #e8e8e8;
+  --text-secondary: #999999;
+  --text-muted: #444444;
+  --accent: #ff2a2a;
+  --accent-hover: #ff5252;
+  --accent-dim: rgba(255, 42, 42, 0.08);
+  --border-color: #333333;
+  --border-width: 2px;
+  --radius: 0px;
+  --card-shadow: none;
+  --font-display: "JetBrains Mono", monospace;
+  --font-body: "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", monospace;
+  --heading-tracking: 0.04em;
+  --badge-transform: uppercase;
+  --badge-tracking: 0.1em;
+}
+
+/* ============================================================
+   DARK TERMINAL
+   Hacker aesthetic. Phosphor green on black.
+   CRT glow, command-line feel, blinking cursors.
+   ============================================================ */
+[data-theme="dark-terminal"] {
+  --bg-primary: #000000;
+  --bg-secondary: #030604;
+  --bg-card: #010301;
+  --bg-card-hover: #061008;
+  --text-primary: #33ff33;
+  --text-secondary: #1faa1f;
+  --text-muted: #0d5a0d;
+  --accent: #33ff33;
+  --accent-hover: #66ff66;
+  --accent-dim: rgba(51, 255, 51, 0.06);
+  --border-color: #0f3a0f;
+  --border-width: 1px;
+  --radius: 0px;
+  --card-shadow: 0 0 12px rgba(51, 255, 51, 0.04);
+  --font-display: "VT323", monospace;
+  --font-body: "Fira Code", "JetBrains Mono", monospace;
+  --font-mono: "Fira Code", "JetBrains Mono", monospace;
+  --heading-tracking: 0.03em;
+  --badge-transform: uppercase;
+  --badge-tracking: 0.06em;
+}

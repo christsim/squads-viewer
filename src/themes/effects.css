@@ -1,0 +1,176 @@
+/* ============================================================
+   Theme-specific visual effects and overlays
+   ============================================================ */
+
+/* --- SWISS VAULT: gold accent line at top of cards --- */
+[data-theme="swiss-vault"] .card {
+  border-top: 2px solid rgba(200, 164, 78, 0.2);
+}
+
+[data-theme="swiss-vault"] .card-accent {
+  border-top-color: var(--accent);
+}
+
+[data-theme="swiss-vault"] h1,
+[data-theme="swiss-vault"] h2 {
+  font-weight: 600;
+}
+
+[data-theme="swiss-vault"] .section-title::after {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 2px;
+  background: var(--accent);
+  margin-top: 8px;
+  opacity: 0.6;
+}
+
+/* --- MISSION CONTROL: scan lines + grid + LED dots --- */
+[data-theme="mission-control"] .dashboard::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 212, 170, 0.015) 2px,
+    rgba(0, 212, 170, 0.015) 4px
+  );
+}
+
+[data-theme="mission-control"] .card {
+  border-left: 3px solid transparent;
+  transition: border-left-color 0.2s ease;
+}
+
+[data-theme="mission-control"] .card-accent {
+  border-left-color: var(--accent);
+}
+
+[data-theme="mission-control"] .status-dot-active {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
+  animation: led-pulse 2s ease-in-out infinite;
+}
+
+@keyframes led-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0, 212, 170, 0.4); }
+  50% { box-shadow: 0 0 14px rgba(0, 212, 170, 0.8); }
+}
+
+[data-theme="mission-control"] .section-title {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+}
+
+/* --- RAW PROTOCOL: heavy borders, brutal structure --- */
+[data-theme="raw-protocol"] .card {
+  border: 2px solid var(--border-color);
+}
+
+[data-theme="raw-protocol"] .card-accent {
+  border-color: var(--accent);
+}
+
+[data-theme="raw-protocol"] h1,
+[data-theme="raw-protocol"] h2,
+[data-theme="raw-protocol"] h3,
+[data-theme="raw-protocol"] .section-title {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+[data-theme="raw-protocol"] .data-table th {
+  border-bottom-width: 2px;
+  border-bottom-color: var(--accent);
+}
+
+[data-theme="raw-protocol"] .data-table td {
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="raw-protocol"] .section-divider {
+  height: 2px;
+  background: var(--border-color);
+}
+
+/* --- DARK TERMINAL: glow, CRT, blinking cursor --- */
+[data-theme="dark-terminal"] .dashboard::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 0, 0, 0.12) 1px,
+    rgba(0, 0, 0, 0.12) 2px
+  );
+}
+
+[data-theme="dark-terminal"] .dashboard::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+[data-theme="dark-terminal"] h1,
+[data-theme="dark-terminal"] h2,
+[data-theme="dark-terminal"] h3 {
+  text-shadow: 0 0 10px rgba(51, 255, 51, 0.4);
+  font-size: 1.5em;
+}
+
+[data-theme="dark-terminal"] .card {
+  border-color: rgba(51, 255, 51, 0.15);
+  box-shadow: 0 0 12px rgba(51, 255, 51, 0.03), inset 0 0 20px rgba(51, 255, 51, 0.01);
+}
+
+[data-theme="dark-terminal"] .card-accent {
+  border-color: rgba(51, 255, 51, 0.35);
+}
+
+[data-theme="dark-terminal"] .accent-glow {
+  text-shadow: 0 0 8px rgba(51, 255, 51, 0.5);
+}
+
+[data-theme="dark-terminal"] .section-title::before {
+  content: "> ";
+  color: var(--accent);
+}
+
+[data-theme="dark-terminal"] .cursor-blink::after {
+  content: "█";
+  animation: blink 1s step-end infinite;
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+[data-theme="dark-terminal"] input {
+  caret-color: var(--accent);
+  text-shadow: 0 0 4px rgba(51, 255, 51, 0.3);
+}
+
+[data-theme="dark-terminal"] .btn-primary {
+  box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+}
+
+[data-theme="dark-terminal"] .btn-primary:hover {
+  box-shadow: 0 0 20px rgba(51, 255, 51, 0.5);
+}
