@@ -91,28 +91,35 @@ document.addEventListener("alpine:init", () => {
     init() {
       this.applyTheme(this.settings.theme);
 
-      // Parse ?helius-key=... from URL query string
-      const params = new URLSearchParams(window.location.search);
+      // Parse hash into address and optional query params
+      // Supports: #ADDRESS?helius-key=KEY or #ADDRESS/?helius-key=KEY
+      const rawHash = window.location.hash.slice(1);
+      const [hashPath, hashQuery] = rawHash.split("?", 2);
+      const hashAddr = hashPath.replace(/\/+$/, ""); // strip trailing slashes
+
+      // Parse ?helius-key=... from query string or hash query params
+      const params = window.location.search
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams(hashQuery || "");
       const heliusKey = params.get("helius-key");
       if (heliusKey && heliusKey.trim()) {
         this.settings.heliusApiKey = heliusKey.trim();
         this.settings.rpcUrl = "helius";
         this.settings.rpcCustom = "";
         saveSettings(this.settings);
-        // Strip query params from URL, keep the hash
-        const cleanUrl = window.location.pathname + window.location.hash;
+        // Clean URL: keep only pathname + bare hash address
+        const cleanUrl = window.location.pathname + (hashAddr ? "#" + hashAddr : "");
         window.history.replaceState(null, "", cleanUrl);
       }
 
       // Parse URL hash for multisig address
-      const hash = window.location.hash.slice(1);
-      if (hash && isValidPublicKey(hash)) {
-        this.addressInput = hash;
+      if (hashAddr && isValidPublicKey(hashAddr)) {
+        this.addressInput = hashAddr;
         queueMicrotask(() => this.load());
       }
       // Listen for hash changes
       window.addEventListener("hashchange", () => {
-        const h = window.location.hash.slice(1);
+        const h = window.location.hash.slice(1).split("?")[0].replace(/\/+$/, "");
         if (h && isValidPublicKey(h) && h !== this.addressInput) {
           this.addressInput = h;
           this.load();
