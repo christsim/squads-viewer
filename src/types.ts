@@ -53,6 +53,16 @@ export interface ProposalInfo {
   rejected: string[];
   cancelled: string[];
   exists: boolean;
+  txType: "vault" | "config" | "unknown";
+  description: string;
+  creator: string | null;
+  vaultIndex: number | null;
+  isPending: boolean;
+  createdAt: number | null;
+  executedAt: number | null;
+  executionSignature: string | null;
+  destination: string | null;
+  destinationSns: string | null;
 }
 
 export interface VaultTransaction {
@@ -74,8 +84,10 @@ export interface AppSettings {
   theme: ThemeName;
   rpcUrl: string;
   rpcCustom: string;
+  heliusApiKey: string;
   resolutionMethod: ResolutionMethod;
   vaultScanMax: number;
+  resolveSns: boolean;
 }
 
 export interface AppState {
@@ -96,8 +108,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "swiss-vault",
   rpcUrl: "https://solana-rpc.publicnode.com",
   rpcCustom: "",
+  heliusApiKey: "",
   resolutionMethod: "squads-api",
   vaultScanMax: 3,
+  resolveSns: false,
 };
 
 export const SQUADS_V4_PROGRAM_ID = "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf";

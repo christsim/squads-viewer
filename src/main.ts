@@ -18,10 +18,12 @@ import {
 } from "./types";
 
 import { resolveAddress } from "./resolve";
-import { fetchMultisig, fetchProposal } from "./multisig";
+import { fetchMultisig, fetchProposal, fetchTransactionType } from "./multisig";
 import { deriveVaults } from "./pda";
-import { isValidPublicKey, getBalance, getTokenAccountsByOwner, getSignaturesForAddress } from "./solana";
+import { isValidPublicKey, getBalance, getTokenAccountsByOwner, getSignaturesForAddress, getParsedTransaction } from "./solana";
 import { fetchTokenList, fetchPrices, getTokenMeta, formatUsd, formatBalance } from "./tokens";
+import { batchResolveSnsDomains } from "./sns";
+import { getLabel, setLabel, getAllLabels } from "./labels";
 
 // Expose to Alpine
 (window as any).THEME_LABELS = THEME_LABELS;
@@ -56,10 +58,19 @@ function solscanTxUrl(sig: string): string {
   return `https://solscan.io/tx/${sig}`;
 }
 
+function resolveTokenDisplay(token: string | null): string {
+  if (!token) return "--";
+  if (token === "SOL" || token === "SPL Token") return token;
+  // If it looks like a mint address, shorten it
+  if (token.length > 20) return shortenAddress(token, 4);
+  return token;
+}
+
 // Expose helpers
 (window as any).shortenAddress = shortenAddress;
 (window as any).solscanUrl = solscanUrl;
 (window as any).solscanTxUrl = solscanTxUrl;
+(window as any).resolveTokenDisplay = resolveTokenDisplay;
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("app", () => ({
@@ -75,10 +86,25 @@ document.addEventListener("alpine:init", () => {
     activeVaultTab: -1,
     settingsOpen: false,
     copied: "" as string,
+    addressLabels: getAllLabels() as Record<string, string>,
 
     init() {
       this.applyTheme(this.settings.theme);
-      // Parse URL hash
+
+      // Parse ?helius-key=... from URL query string
+      const params = new URLSearchParams(window.location.search);
+      const heliusKey = params.get("helius-key");
+      if (heliusKey && heliusKey.trim()) {
+        this.settings.heliusApiKey = heliusKey.trim();
+        this.settings.rpcUrl = "helius";
+        this.settings.rpcCustom = "";
+        saveSettings(this.settings);
+        // Strip query params from URL, keep the hash
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState(null, "", cleanUrl);
+      }
+
+      // Parse URL hash for multisig address
       const hash = window.location.hash.slice(1);
       if (hash && isValidPublicKey(hash)) {
         this.addressInput = hash;
@@ -122,8 +148,19 @@ document.addEventListener("alpine:init", () => {
       saveSettings(this.settings);
     },
 
+    get activeVault(): VaultInfo | null {
+      if (this.activeVaultTab >= 0 && this.activeVaultTab < this.vaults.length) {
+        return this.vaults[this.activeVaultTab];
+      }
+      return null;
+    },
+
     get rpcUrl(): string {
-      return this.settings.rpcCustom?.trim() || this.settings.rpcUrl;
+      if (this.settings.rpcCustom?.trim()) return this.settings.rpcCustom.trim();
+      if (this.settings.rpcUrl === "helius" && this.settings.heliusApiKey?.trim()) {
+        return `https://mainnet.helius-rpc.com/?api-key=${this.settings.heliusApiKey.trim()}`;
+      }
+      return this.settings.rpcUrl;
     },
 
     get totalUsd(): string {
@@ -153,6 +190,19 @@ document.addEventListener("alpine:init", () => {
           this.copied = "";
         }, 1500);
       } catch {}
+    },
+
+    labelAddress(address: string) {
+      const current = getLabel(address) || "";
+      const label = prompt(`Label for ${address.slice(0, 12)}...`, current);
+      if (label !== null) {
+        setLabel(address, label);
+        this.addressLabels = getAllLabels();
+      }
+    },
+
+    displayName(address: string): string | null {
+      return this.addressLabels[address] || null;
     },
 
     async load() {
@@ -338,11 +388,15 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
+    proposalsLoading: false,
+
     async loadProposals() {
       if (!this.multisig) return;
 
       const txCount = this.multisig.transactionIndex;
       if (txCount === 0) return;
+
+      this.proposalsLoading = true;
 
       // Fetch last 20 proposals (or all if fewer)
       const start = Math.max(1, txCount - 19);
@@ -354,22 +408,68 @@ document.addEventListener("alpine:init", () => {
 
       try {
         this.proposals = await Promise.all(promises);
+
+        // Collect vault addresses for cross-referencing
+        const vaultAddrs = this.vaults.map((v: VaultInfo) => v.address);
+
+        // Fetch transaction types for all proposals (open and closed)
+        // Closed proposals will recover from transaction history
+        const batchSize = 5;
+        for (let i = 0; i < this.proposals.length; i += batchSize) {
+          const batch = this.proposals.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map((p: ProposalInfo) =>
+              fetchTransactionType(this.rpcUrl, this.multisig!.address, p.index, p, vaultAddrs).catch(() => {})
+            )
+          );
+          if (i + batchSize < this.proposals.length) {
+            await new Promise((r) => setTimeout(r, 200));
+          }
+        }
+
+        // Resolve SNS domains for destinations if enabled
+        if (this.settings.resolveSns) {
+          await this.resolveProposalSns();
+        }
       } catch {
         this.proposals = [];
+      } finally {
+        this.proposalsLoading = false;
       }
     },
+
+    async resolveProposalSns() {
+      const destinations = this.proposals
+        .map((p: ProposalInfo) => p.destination)
+        .filter((d: string | null): d is string => !!d);
+
+      const unique = [...new Set(destinations)];
+      if (unique.length === 0) return;
+
+      const resolved = await batchResolveSnsDomains(unique);
+      for (const p of this.proposals) {
+        if (p.destination && resolved.has(p.destination)) {
+          p.destinationSns = resolved.get(p.destination) || null;
+        }
+      }
+    },
+
+    activityLoading: false,
 
     async loadVaultActivity(vaultIndex: number) {
       const vault = this.vaults[vaultIndex];
       if (!vault || vault.activity.length > 0) return;
 
+      this.activityLoading = true;
+
       try {
         const signatures = await getSignaturesForAddress(
           this.rpcUrl,
           vault.address,
-          20
+          10
         );
 
+        // Initialize with basic info
         vault.activity = signatures.map((sig: any) => ({
           signature: sig.signature,
           blockTime: sig.blockTime,
@@ -381,8 +481,170 @@ document.addEventListener("alpine:init", () => {
           counterparty: null,
           memo: sig.memo || null,
         }));
+
+        // Fetch and parse transaction details in batches of 5
+        const batchSize = 5;
+        for (let i = 0; i < vault.activity.length; i += batchSize) {
+          const batch = vault.activity.slice(i, i + batchSize);
+          const parsedBatch = await Promise.all(
+            batch.map((tx: any) =>
+              getParsedTransaction(this.rpcUrl, tx.signature).catch(() => null)
+            )
+          );
+
+          for (let j = 0; j < parsedBatch.length; j++) {
+            const parsed = parsedBatch[j];
+            if (!parsed) continue;
+            const tx = vault.activity[i + j];
+            this.parseTransactionDetails(tx, parsed, vault.address);
+          }
+
+          // Small delay between batches to avoid rate limiting
+          if (i + batchSize < vault.activity.length) {
+            await new Promise((r) => setTimeout(r, 200));
+          }
+        }
+
+        // Resolve token mint addresses to symbols using cached token list
+        const tokenList = await fetchTokenList();
+        for (const tx of vault.activity) {
+          if (tx.token && tx.token !== "SOL" && tx.token !== "SPL Token" && tx.token.length > 20) {
+            const meta = tokenList.get(tx.token);
+            if (meta) {
+              tx.token = meta.symbol;
+            }
+          }
+        }
       } catch {
         vault.activity = [];
+      } finally {
+        this.activityLoading = false;
+      }
+    },
+
+    parseTransactionDetails(tx: any, parsed: any, vaultAddress: string) {
+      const instructions = parsed.transaction?.message?.instructions || [];
+      const innerInstructions = parsed.meta?.innerInstructions || [];
+
+      // Collect all instructions (top-level + inner)
+      const allIxs = [...instructions];
+      for (const inner of innerInstructions) {
+        allIxs.push(...(inner.instructions || []));
+      }
+
+      // Look for SOL transfers and token transfers
+      for (const ix of allIxs) {
+        // System Program Transfer (SOL)
+        if (ix.program === "system" && ix.parsed?.type === "transfer") {
+          const info = ix.parsed.info;
+          const lamports = info.lamports || 0;
+          const amount = lamports / 1e9;
+
+          if (info.destination === vaultAddress) {
+            tx.direction = "in";
+            tx.amount = amount;
+            tx.token = "SOL";
+            tx.counterparty = info.source;
+            return;
+          } else if (info.source === vaultAddress) {
+            tx.direction = "out";
+            tx.amount = amount;
+            tx.token = "SOL";
+            tx.counterparty = info.destination;
+            return;
+          }
+        }
+
+        // SPL Token TransferChecked
+        if (
+          (ix.program === "spl-token" || ix.program === "spl-token-2022") &&
+          ix.parsed?.type === "transferChecked"
+        ) {
+          const info = ix.parsed.info;
+          const amount = parseFloat(info.tokenAmount?.uiAmountString || "0");
+          const mint = info.mint || "";
+
+          // Determine direction from pre/post token balances
+          const preBalances = parsed.meta?.preTokenBalances || [];
+          const postBalances = parsed.meta?.postTokenBalances || [];
+
+          // Check if vault is the source or destination owner
+          const sourceOwner = info.authority || info.multisigAuthority;
+          if (sourceOwner === vaultAddress) {
+            tx.direction = "out";
+            tx.amount = amount;
+            tx.token = mint;
+            // Find destination owner from post-token balances
+            for (const post of postBalances) {
+              if (post.mint === mint && post.owner !== vaultAddress) {
+                tx.counterparty = post.owner;
+                break;
+              }
+            }
+            return;
+          }
+
+          // Check if vault is the destination
+          for (const post of postBalances) {
+            if (post.mint === mint && post.owner === vaultAddress) {
+              const pre = preBalances.find(
+                (p: any) => p.mint === mint && p.owner === vaultAddress
+              );
+              const preAmount = parseFloat(
+                pre?.uiTokenAmount?.uiAmountString || "0"
+              );
+              const postAmount = parseFloat(
+                post.uiTokenAmount?.uiAmountString || "0"
+              );
+              if (postAmount > preAmount) {
+                tx.direction = "in";
+                tx.amount = amount;
+                tx.token = mint;
+                tx.counterparty = sourceOwner || null;
+                return;
+              }
+            }
+          }
+        }
+
+        // SPL Token Transfer (legacy, no checked)
+        if (
+          (ix.program === "spl-token" || ix.program === "spl-token-2022") &&
+          ix.parsed?.type === "transfer"
+        ) {
+          const info = ix.parsed.info;
+          const amount = parseFloat(info.amount || "0");
+          const authority = info.authority || info.multisigAuthority;
+
+          if (authority === vaultAddress) {
+            tx.direction = "out";
+            tx.amount = amount;
+            tx.token = "SPL Token";
+            tx.counterparty = info.destination;
+            return;
+          }
+        }
+      }
+
+      // If no transfer found, check SOL balance changes
+      const accountKeys = parsed.transaction?.message?.accountKeys || [];
+      const preBalances = parsed.meta?.preBalances || [];
+      const postBalances = parsed.meta?.postBalances || [];
+
+      for (let k = 0; k < accountKeys.length; k++) {
+        const key =
+          typeof accountKeys[k] === "string"
+            ? accountKeys[k]
+            : accountKeys[k]?.pubkey;
+        if (key === vaultAddress && preBalances[k] !== undefined) {
+          const diff = (postBalances[k] - preBalances[k]) / 1e9;
+          if (Math.abs(diff) > 0.000001) {
+            tx.direction = diff > 0 ? "in" : "out";
+            tx.amount = Math.abs(diff);
+            tx.token = "SOL";
+            return;
+          }
+        }
       }
     },
 

@@ -24,6 +24,14 @@ describe("DEFAULT_SETTINGS", () => {
   it("defaults vault scan max to 3", () => {
     expect(DEFAULT_SETTINGS.vaultScanMax).toBe(3);
   });
+
+  it("defaults helius API key to empty string", () => {
+    expect(DEFAULT_SETTINGS.heliusApiKey).toBe("");
+  });
+
+  it("defaults SNS resolution to false", () => {
+    expect(DEFAULT_SETTINGS.resolveSns).toBe(false);
+  });
 });
 
 describe("constants", () => {
