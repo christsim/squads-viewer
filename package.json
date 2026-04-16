@@ -18,7 +18,6 @@
   "devDependencies": {
     "@fontsource-variable/dm-sans": "5.1.1",
     "@fontsource/chakra-petch": "5.1.1",
-    "@fontsource/cormorant-garamond": "5.1.1",
     "@fontsource/fira-code": "5.1.1",
     "@fontsource/jetbrains-mono": "5.1.1",
     "@fontsource/vt323": "5.1.1",

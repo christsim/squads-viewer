@@ -1,6 +1,4 @@
 /* === Font Imports (must precede @tailwind) === */
-@import "@fontsource/cormorant-garamond/400.css";
-@import "@fontsource/cormorant-garamond/600.css";
 @import "@fontsource-variable/dm-sans";
 @import "@fontsource/chakra-petch/400.css";
 @import "@fontsource/chakra-petch/600.css";
@@ -50,7 +48,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: border-color 200ms ease-out;
   }
 
   input:focus, select:focus, textarea:focus {
@@ -60,7 +58,7 @@
   button {
     font-family: var(--font-body);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: transform 160ms ease-out, color 150ms ease, background-color 150ms ease, border-color 150ms ease;
   }
 
   code, pre {
@@ -83,9 +81,11 @@
     transition: background-color 0.3s ease, border-color 0.3s ease;
   }
 
-  .card-hover:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--accent);
+  @media (hover: hover) and (pointer: fine) {
+    .card-hover:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+    }
   }
 
   .badge {
@@ -121,8 +121,14 @@
     text-transform: var(--badge-transform, none);
   }
 
-  .btn-primary:hover {
-    background: var(--accent-hover);
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
   }
 
   .btn-ghost {
@@ -134,9 +140,15 @@
     font-size: 0.8rem;
   }
 
-  .btn-ghost:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+  .btn-ghost:active {
+    transform: scale(0.97);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
   }
 
   .addr {
@@ -149,11 +161,13 @@
   .addr-link {
     text-decoration: none;
     color: var(--text-secondary);
-    transition: color 0.15s;
+    transition: color 150ms ease;
   }
 
-  .addr-link:hover {
-    color: var(--accent);
+  @media (hover: hover) and (pointer: fine) {
+    .addr-link:hover {
+      color: var(--accent);
+    }
   }
 
   .status-dot {
@@ -202,8 +216,10 @@
     color: var(--text-secondary);
   }
 
-  .data-table tr:hover td {
-    background: var(--bg-card-hover);
+  @media (hover: hover) and (pointer: fine) {
+    .data-table tr:hover td {
+      background: var(--bg-card-hover);
+    }
   }
 
   .spinner {
@@ -225,7 +241,7 @@
   }
 
   .fade-in {
-    animation: fadeIn 0.35s ease-out forwards;
+    animation: fadeIn 0.25s ease-out forwards;
   }
 
   .stagger-1 { animation-delay: 0.05s; opacity: 0; }
@@ -233,4 +249,23 @@
   .stagger-3 { animation-delay: 0.15s; opacity: 0; }
   .stagger-4 { animation-delay: 0.2s; opacity: 0; }
   .stagger-5 { animation-delay: 0.25s; opacity: 0; }
+}
+
+/* === Reduced Motion === */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .fade-in {
+    animation: none;
+    opacity: 1;
+  }
+
+  .stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5 {
+    animation-delay: 0s;
+    opacity: 1;
+  }
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="swiss-vault">
+<html lang="en" data-theme="default">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -220,12 +220,12 @@
               </p>
             </div>
 
-            <!-- SNS Resolution -->
+            <!-- SNS + Filters -->
             <div>
               <label class="block mb-2 font-semibold section-title" style="color: var(--text-muted); font-size: 0.72rem">
-                SNS Domains
+                Display
               </label>
-              <label class="flex items-center gap-2 cursor-pointer py-1 px-2">
+              <label class="flex items-center gap-2 cursor-pointer py-1 px-2 mb-1">
                 <input
                   type="checkbox"
                   :checked="settings.resolveSns"
@@ -234,8 +234,29 @@
                 />
                 <span class="text-xs" style="color: var(--text-secondary)">Resolve .sol names</span>
               </label>
+              <label class="flex items-center gap-2 cursor-pointer py-1 px-2 mb-1">
+                <input
+                  type="checkbox"
+                  :checked="settings.showFailedTxs"
+                  @change="settings.showFailedTxs = !settings.showFailedTxs; persistSettings()"
+                  style="accent-color: var(--accent)"
+                />
+                <span class="text-xs" style="color: var(--text-secondary)">Show failed transactions</span>
+              </label>
+              <div class="flex items-center gap-2 py-1 px-2">
+                <span class="text-xs" style="color: var(--text-secondary)">Min deposit:</span>
+                <input
+                  type="number"
+                  x-model.number="settings.minDepositSol"
+                  @change="persistSettings()"
+                  min="0"
+                  step="0.001"
+                  class="w-20 px-2 py-1 text-xs text-center"
+                />
+                <span class="text-xs" style="color: var(--text-muted)">SOL</span>
+              </div>
               <p class="text-xs mt-1 px-2" style="color: var(--text-muted); font-size: 0.6rem">
-                Uses Bonfida API to resolve addresses to .sol domains
+                Hides small inbound deposits (dust/poisoning). Labelled addresses always shown.
               </p>
             </div>
           </div>
@@ -573,6 +594,12 @@
                     Vault History
                   </h3>
                   <span x-show="activityLoading" class="spinner" style="width: 12px; height: 12px"></span>
+                  <span
+                    x-show="activeVault.activity.length > 0 && filteredActivity.length < activeVault.activity.length"
+                    class="text-xs"
+                    style="color: var(--text-muted)"
+                    x-text="(activeVault.activity.length - filteredActivity.length) + ' hidden (filters)'"
+                  ></span>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="data-table">
@@ -583,12 +610,13 @@
                         <th>Token</th>
                         <th>Counterparty</th>
                         <th>Time</th>
-                        <th>Tx</th>
+                        <th>Status</th>
+                        <th>Transaction</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <template x-for="tx in activeVault.activity" :key="tx.signature">
-                        <tr>
+                      <template x-for="tx in filteredActivity" :key="tx.signature">
+                        <tr :style="tx.err ? 'opacity: 0.5' : ''">
                           <!-- Direction arrow -->
                           <td class="text-center">
                             <span
@@ -624,26 +652,42 @@
                                   style="color: var(--accent)"
                                   x-text="displayName(tx.counterparty)"
                                 ></span>
-                                <a
-                                  :href="solscanUrl(tx.counterparty)"
-                                  target="_blank"
-                                  class="addr addr-link break-all"
-                                  x-text="tx.counterparty"
-                                ></a>
+                                <div class="flex items-center gap-1">
+                                  <a
+                                    :href="solscanUrl(tx.counterparty)"
+                                    target="_blank"
+                                    class="addr addr-link break-all"
+                                    x-text="tx.counterparty"
+                                  ></a>
+                                  <button
+                                    @click="labelAddress(tx.counterparty)"
+                                    class="btn-ghost text-xs px-1 py-0 shrink-0 opacity-30 hover:opacity-100"
+                                  >&#x1F3F7;</button>
+                                </div>
                               </div>
                             </template>
                             <span x-show="!tx.counterparty" style="color: var(--text-muted)">--</span>
                           </td>
                           <!-- Time -->
                           <td style="white-space: nowrap" x-text="formatDate(tx.blockTime)"></td>
-                          <!-- Tx link -->
+                          <!-- Status -->
+                          <td>
+                            <span
+                              class="badge"
+                              :class="tx.err ? '' : 'badge-accent'"
+                              x-text="tx.err ? 'Failed' : 'Success'"
+                            ></span>
+                          </td>
+                          <!-- Tx hash -->
                           <td>
                             <a
                               :href="solscanTxUrl(tx.signature)"
                               target="_blank"
-                              class="addr addr-link"
-                              title="View on Solscan"
-                            >&#x2197;</a>
+                              class="addr addr-link block truncate"
+                              style="font-size: 0.7rem; max-width: 180px"
+                              :title="tx.signature"
+                              x-text="tx.signature"
+                            ></a>
                           </td>
                         </tr>
                       </template>
@@ -748,12 +792,18 @@
                     style="color: var(--accent)"
                     x-text="displayName(prop.creator)"
                   ></span>
-                  <a
-                    :href="solscanUrl(prop.creator)"
-                    target="_blank"
-                    class="addr addr-link break-all"
-                    x-text="prop.creator"
-                  ></a>
+                  <div class="inline-flex items-center gap-1">
+                    <a
+                      :href="solscanUrl(prop.creator)"
+                      target="_blank"
+                      class="addr addr-link break-all"
+                      x-text="prop.creator"
+                    ></a>
+                    <button
+                      @click="labelAddress(prop.creator)"
+                      class="btn-ghost text-xs px-1 py-0 shrink-0 opacity-30 hover:opacity-100"
+                    >&#x1F3F7;</button>
+                  </div>
                 </div>
 
                 <!-- Line 4: Timestamps -->
@@ -799,8 +849,9 @@
                     <a
                       :href="solscanTxUrl(prop.executionSignature)"
                       target="_blank"
-                      class="addr addr-link break-all"
-                      style="font-size: 0.65rem"
+                      class="addr addr-link block truncate"
+                      style="font-size: 0.65rem; max-width: 220px"
+                      :title="prop.executionSignature"
                       x-text="prop.executionSignature + ' ↗'"
                     ></a>
                   </template>

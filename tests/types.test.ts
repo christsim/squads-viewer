@@ -13,8 +13,8 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.rpcUrl).toMatch(/^https:\/\//);
   });
 
-  it("defaults to swiss-vault theme", () => {
-    expect(DEFAULT_SETTINGS.theme).toBe("swiss-vault");
+  it("defaults to default theme", () => {
+    expect(DEFAULT_SETTINGS.theme).toBe("default");
   });
 
   it("defaults to squads-api resolution", () => {
@@ -31,6 +31,14 @@ describe("DEFAULT_SETTINGS", () => {
 
   it("defaults SNS resolution to false", () => {
     expect(DEFAULT_SETTINGS.resolveSns).toBe(false);
+  });
+
+  it("defaults showFailedTxs to false", () => {
+    expect(DEFAULT_SETTINGS.showFailedTxs).toBe(false);
+  });
+
+  it("defaults minDepositSol to 0.001", () => {
+    expect(DEFAULT_SETTINGS.minDepositSol).toBe(0.001);
   });
 });
 
@@ -51,7 +59,7 @@ describe("constants", () => {
 describe("THEME_LABELS", () => {
   it("has all 4 themes", () => {
     expect(Object.keys(THEME_LABELS)).toHaveLength(4);
-    expect(THEME_LABELS["swiss-vault"]).toBe("Swiss Vault");
+    expect(THEME_LABELS["default"]).toBe("Default");
     expect(THEME_LABELS["mission-control"]).toBe("Mission Control");
     expect(THEME_LABELS["raw-protocol"]).toBe("Raw Protocol");
     expect(THEME_LABELS["dark-terminal"]).toBe("Dark Terminal");

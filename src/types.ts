@@ -77,7 +77,7 @@ export interface VaultTransaction {
   memo: string | null;
 }
 
-export type ThemeName = "swiss-vault" | "mission-control" | "raw-protocol" | "dark-terminal";
+export type ThemeName = "default" | "mission-control" | "raw-protocol" | "dark-terminal";
 export type ResolutionMethod = "squads-api" | "onchain-only";
 
 export interface AppSettings {
@@ -88,6 +88,8 @@ export interface AppSettings {
   resolutionMethod: ResolutionMethod;
   vaultScanMax: number;
   resolveSns: boolean;
+  showFailedTxs: boolean;
+  minDepositSol: number;
 }
 
 export interface AppState {
@@ -105,13 +107,15 @@ export interface AppState {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: "swiss-vault",
+  theme: "default",
   rpcUrl: "https://solana-rpc.publicnode.com",
   rpcCustom: "",
   heliusApiKey: "",
   resolutionMethod: "squads-api",
   vaultScanMax: 3,
   resolveSns: false,
+  showFailedTxs: false,
+  minDepositSol: 0.001,
 };
 
 export const SQUADS_V4_PROGRAM_ID = "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf";
@@ -122,7 +126,7 @@ export const JUPITER_TOKEN_LIST_URL = "https://token.jup.ag/strict";
 export const JUPITER_PRICE_API_URL = "https://api.jup.ag/price/v2";
 
 export const THEME_LABELS: Record<ThemeName, string> = {
-  "swiss-vault": "Swiss Vault",
+  "default": "Default",
   "mission-control": "Mission Control",
   "raw-protocol": "Raw Protocol",
   "dark-terminal": "Dark Terminal",

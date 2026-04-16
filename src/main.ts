@@ -155,6 +155,28 @@ document.addEventListener("alpine:init", () => {
       return null;
     },
 
+    get filteredActivity(): any[] {
+      if (!this.activeVault) return [];
+      return this.activeVault.activity.filter((tx: any) => {
+        // Always show txs where the counterparty has a label
+        const hasLabel = tx.counterparty && this.addressLabels[tx.counterparty];
+        if (hasLabel) return true;
+
+        // Hide failed txs unless setting enabled
+        if (tx.err && !this.settings.showFailedTxs) return false;
+        // Hide small inbound deposits (poisoning filter)
+        if (
+          tx.direction === "in" &&
+          tx.amount !== null &&
+          tx.amount < this.settings.minDepositSol &&
+          tx.token === "SOL"
+        ) {
+          return false;
+        }
+        return true;
+      });
+    },
+
     get rpcUrl(): string {
       if (this.settings.rpcCustom?.trim()) return this.settings.rpcCustom.trim();
       if (this.settings.rpcUrl === "helius" && this.settings.heliusApiKey?.trim()) {

@@ -2,28 +2,14 @@
    Theme-specific visual effects and overlays
    ============================================================ */
 
-/* --- SWISS VAULT: gold accent line at top of cards --- */
-[data-theme="swiss-vault"] .card {
-  border-top: 2px solid rgba(200, 164, 78, 0.2);
+/* --- DEFAULT: clean, no decorative effects --- */
+[data-theme="default"] .card-accent {
+  border-color: var(--accent);
 }
 
-[data-theme="swiss-vault"] .card-accent {
-  border-top-color: var(--accent);
-}
-
-[data-theme="swiss-vault"] h1,
-[data-theme="swiss-vault"] h2 {
+[data-theme="default"] h1,
+[data-theme="default"] h2 {
   font-weight: 600;
-}
-
-[data-theme="swiss-vault"] .section-title::after {
-  content: "";
-  display: block;
-  width: 40px;
-  height: 2px;
-  background: var(--accent);
-  margin-top: 8px;
-  opacity: 0.6;
 }
 
 /* --- MISSION CONTROL: scan lines + grid + LED dots --- */
