@@ -659,6 +659,7 @@ async function recoverClosedProposal(
     for (const { sig, parsed } of parsedTxs) {
       const transfer = extractTransferFromParsedTx(parsed, vaultAddresses);
       if (transfer) {
+        proposal.status = "Executed";
         proposal.txType = "vault";
         proposal.description = transfer.description;
         proposal.destination = transfer.destination;
@@ -673,6 +674,7 @@ async function recoverClosedProposal(
     for (const { sig, parsed } of parsedTxs) {
       const configDesc = extractConfigFromCreateTx(parsed);
       if (configDesc) {
+        proposal.status = "Executed";
         proposal.txType = "config";
         proposal.description = configDesc;
         // Find the execute signature (the one after create)
@@ -693,6 +695,7 @@ async function recoverClosedProposal(
       const isConfigExec = logs.some((l: string) => l.includes("ConfigTransactionExecute"));
       const isVaultExec = logs.some((l: string) => l.includes("VaultTransactionExecute"));
       if (isConfigExec) {
+        proposal.status = "Executed";
         proposal.txType = "config";
         proposal.description = "Config change (executed)";
         proposal.executionSignature = sig.signature;
@@ -700,6 +703,7 @@ async function recoverClosedProposal(
         return;
       }
       if (isVaultExec) {
+        proposal.status = "Executed";
         proposal.txType = "vault";
         proposal.description = "Vault transaction (executed)";
         proposal.executionSignature = sig.signature;
@@ -710,6 +714,7 @@ async function recoverClosedProposal(
 
     // If we found signatures but couldn't identify type
     if (sorted.length >= 2) {
+      proposal.status = "Executed";
       proposal.description = "Executed (details unavailable)";
       proposal.executionSignature = sorted.length >= 3
         ? sorted[1].signature
