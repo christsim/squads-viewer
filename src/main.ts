@@ -431,8 +431,9 @@ document.addEventListener("alpine:init", () => {
       const start = Math.max(1, txCount - 19);
       const promises: Promise<ProposalInfo>[] = [];
 
+      const staleTxIndex = this.multisig.staleTransactionIndex;
       for (let i = txCount; i >= start; i--) {
-        promises.push(fetchProposal(this.rpcUrl, this.multisig.address, i));
+        promises.push(fetchProposal(this.rpcUrl, this.multisig.address, i, staleTxIndex));
       }
 
       try {

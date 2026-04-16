@@ -58,6 +58,7 @@ export interface ProposalInfo {
   creator: string | null;
   vaultIndex: number | null;
   isPending: boolean;
+  isStale: boolean;
   createdAt: number | null;
   executedAt: number | null;
   executionSignature: string | null;

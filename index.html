@@ -741,16 +741,21 @@
                   </div>
                   <div class="flex items-center gap-1.5">
                     <span
+                      x-show="prop.isStale"
+                      class="badge"
+                      style="color: var(--text-muted); border-color: var(--text-muted); font-size: 0.6rem"
+                    >(stale)</span>
+                    <span
                       class="status-dot"
                       :class="{
-                        'status-dot-active': prop.isPending,
+                        'status-dot-active': prop.isPending && !prop.isStale,
                         'status-dot-pending': prop.status === 'Approved',
-                        'status-dot-closed': !prop.isPending && prop.status !== 'Approved',
+                        'status-dot-closed': (!prop.isPending && prop.status !== 'Approved') || prop.isStale,
                       }"
                     ></span>
                     <span
                       class="badge"
-                      :class="{ 'badge-accent': prop.isPending || prop.status === 'Executed' || prop.status === 'Approved' }"
+                      :class="{ 'badge-accent': !prop.isStale && (prop.isPending || prop.status === 'Executed' || prop.status === 'Approved') }"
                       x-text="prop.status"
                     ></span>
                   </div>

@@ -146,7 +146,8 @@ const PROPOSAL_STATUSES = [
 export async function fetchProposal(
   rpcUrl: string,
   multisigPda: string,
-  txIndex: number
+  txIndex: number,
+  staleTransactionIndex: number = 0
 ): Promise<ProposalInfo> {
   const msPda = new PublicKey(multisigPda);
   const [transactionPda] = getTransactionPda(msPda, txIndex);
@@ -156,7 +157,7 @@ export async function fetchProposal(
     index: txIndex,
     transactionPda: transactionPda.toBase58(),
     proposalPda: proposalPda.toBase58(),
-    status: "Closed",
+    status: "None",
     approved: [],
     rejected: [],
     cancelled: [],
@@ -166,6 +167,7 @@ export async function fetchProposal(
     creator: null,
     vaultIndex: null,
     isPending: false,
+    isStale: txIndex <= staleTransactionIndex,
     createdAt: null,
     executedAt: null,
     executionSignature: null,
